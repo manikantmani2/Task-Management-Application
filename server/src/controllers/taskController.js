@@ -57,7 +57,9 @@ const createNotification = async ({ userId, taskId, type, message, io }) => {
     createdAt: notification.createdAt
   };
 
-  io.to(`user:${userId.toString()}`).emit('notification:new', payload);
+  if (io) {
+    io.to(`user:${userId.toString()}`).emit('notification:new', payload);
+  }
 
   return notification;
 };
@@ -145,7 +147,9 @@ export const createTask = asyncHandler(async (req, res) => {
   const populatedTask = populateTask(Task.findById(task._id));
   const result = await populatedTask.lean();
 
-  io.emit('task:created', result);
+  if (io) {
+    io.emit('task:created', result);
+  }
   if (assignee) {
     await createNotification({
       userId: assignee._id,
@@ -211,7 +215,9 @@ export const updateTask = asyncHandler(async (req, res) => {
   const populatedTask = populateTask(Task.findById(task._id));
   const result = await populatedTask.lean();
 
-  io.emit('task:updated', result);
+  if (io) {
+    io.emit('task:updated', result);
+  }
   if (result.assignee) {
     await createNotification({
       userId: result.assignee._id,
@@ -239,7 +245,9 @@ export const deleteTask = asyncHandler(async (req, res) => {
   }
 
   await Task.deleteOne({ _id: task._id });
-  io.emit('task:deleted', { id: task._id.toString() });
+  if (io) {
+    io.emit('task:deleted', { id: task._id.toString() });
+  }
 
   res.status(204).send();
 });
@@ -269,7 +277,9 @@ export const assignTask = asyncHandler(async (req, res) => {
   const populatedTask = populateTask(Task.findById(task._id));
   const result = await populatedTask.lean();
 
-  io.emit('task:updated', result);
+  if (io) {
+    io.emit('task:updated', result);
+  }
   await createNotification({
     userId: assignee._id,
     taskId: task._id,
