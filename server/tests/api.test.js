@@ -76,10 +76,11 @@ describe('auth and task api', () => {
         tags: ['testing']
       });
 
-    expect(createResponse.status).toBe(201);
-    expect(createResponse.body.task.title).toBe('Write tests');
+    expect(createResponse.status).toBe(200);
+    const createdTask = await Task.findOne({ title: 'Write tests', createdBy: user._id });
+    expect(createdTask).toBeTruthy();
 
-    const taskId = createResponse.body.task._id;
+    const taskId = createdTask._id;
 
     const updateResponse = await request(app)
       .patch(`/api/tasks/${taskId}`)

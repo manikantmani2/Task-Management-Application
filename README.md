@@ -44,6 +44,22 @@ npm run dev
 Frontend: `http://localhost:5173`
 API: `http://localhost:5000`
 
+## Deploying to Vercel
+
+The app can be deployed to Vercel as a static React frontend plus serverless API routes, but it needs a cloud MongoDB database. Local MongoDB at `localhost:27017` will not work in production.
+
+1. Create a MongoDB Atlas cluster and copy the connection string.
+2. In Vercel, add these environment variables for the production project:
+
+```bash
+MONGODB_URI=your-mongodb-atlas-connection-string
+JWT_SECRET=your-strong-secret
+CLIENT_ORIGIN=https://your-vercel-domain.vercel.app
+```
+
+3. Redeploy the project on Vercel.
+4. The client will call `/api` in production automatically.
+
 ## Features
 
 - JWT login and registration

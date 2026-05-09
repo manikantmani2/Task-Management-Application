@@ -5,7 +5,7 @@ import { useAuth } from './AuthContext.jsx';
 
 const TaskContext = createContext(null);
 
-const socketUrl = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000';
+const socketUrl = import.meta.env.VITE_SOCKET_URL || (import.meta.env.PROD ? '' : 'http://localhost:5000');
 
 export const TaskProvider = ({ children }) => {
   const { user } = useAuth();
@@ -15,66 +15,7 @@ export const TaskProvider = ({ children }) => {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    let socket;
-
-    const loadData = async () => {
-      if (!user) {
-        setLoading(false);
-        return;
-      }
-
-      const [tasksResponse, boardResponse, summaryResponse, notificationsResponse] = await Promise.all([
-        api.get('/tasks'),
-        api.get('/tasks/board'),
-        api.get('/dashboard/summary'),
-        api.get('/notifications')
-      ]);
-
-      setTasks(tasksResponse.data.tasks);
-      setColumns(boardResponse.data.columns);
-      setSummary(summaryResponse.data);
-      setNotifications(notificationsResponse.data.notifications);
-
-      socket = io(socketUrl, {
-        auth: {
-          token: localStorage.getItem('taskflow_token')
-        }
-      });
-
-      socket.on('task:created', (task) => {
-        setTasks((current) => [task, ...current.filter((item) => item._id !== task._id)]);
-      });
-
-      socket.on('task:updated', (task) => {
-        setTasks((current) => current.map((item) => (item._id === task._id ? task : item)));
-      });
-
-      socket.on('task:deleted', ({ id }) => {
-        setTasks((current) => current.filter((task) => task._id !== id));
-      });
-
-      socket.on('notification:new', (notification) => {
-        setNotifications((current) => [notification, ...current]);
-      });
-
-      socket.on('connect_error', () => {
-        socket?.disconnect();
-      });
-
-      setLoading(false);
-    };
-
-    loadData().catch(() => setLoading(false));
-
-    return () => {
-      if (socket) {
-        socket.disconnect();
-      }
-    };
-  }, [user]);
-
-  const refresh = async () => {
+  const fetchSnapshot = async () => {
     const [tasksResponse, boardResponse, summaryResponse, notificationsResponse] = await Promise.all([
       api.get('/tasks'),
       api.get('/tasks/board'),
@@ -86,6 +27,70 @@ export const TaskProvider = ({ children }) => {
     setColumns(boardResponse.data.columns);
     setSummary(summaryResponse.data);
     setNotifications(notificationsResponse.data.notifications);
+  };
+
+  useEffect(() => {
+    let socket;
+    let refreshTimer;
+
+    const loadData = async () => {
+      if (!user) {
+        setLoading(false);
+        return;
+      }
+
+      await fetchSnapshot();
+
+      if (socketUrl) {
+        socket = io(socketUrl, {
+          auth: {
+            token: localStorage.getItem('taskflow_token')
+          }
+        });
+
+        socket.on('task:created', (task) => {
+          setTasks((current) => [task, ...current.filter((item) => item._id !== task._id)]);
+        });
+
+        socket.on('task:updated', (task) => {
+          setTasks((current) => current.map((item) => (item._id === task._id ? task : item)));
+        });
+
+        socket.on('task:deleted', ({ id }) => {
+          setTasks((current) => current.filter((task) => task._id !== id));
+        });
+
+        socket.on('notification:new', (notification) => {
+          setNotifications((current) => [notification, ...current]);
+        });
+
+        socket.on('connect_error', () => {
+          socket?.disconnect();
+        });
+      } else {
+        refreshTimer = setInterval(() => {
+          fetchSnapshot().catch(() => undefined);
+        }, 30000);
+      }
+
+      setLoading(false);
+    };
+
+    loadData().catch(() => setLoading(false));
+
+    return () => {
+      if (socket) {
+        socket.disconnect();
+      }
+
+      if (refreshTimer) {
+        clearInterval(refreshTimer);
+      }
+    };
+  }, [user]);
+
+  const refresh = async () => {
+    await fetchSnapshot();
   };
 
   const value = useMemo(
