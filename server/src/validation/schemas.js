@@ -1,6 +1,12 @@
 import { z } from 'zod';
 
 const objectId = z.string().regex(/^[a-fA-F0-9]{24}$/, 'Invalid id');
+const dateTimeSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .refine((value) => !Number.isNaN(new Date(value).getTime()), 'Invalid datetime')
+  .transform((value) => new Date(value).toISOString());
 
 export const authSchema = z.object({
   body: z.object({
@@ -31,7 +37,7 @@ export const taskCreateSchema = z.object({
     description: z.string().max(5000).optional().default(''),
     status: z.enum(['todo', 'in-progress', 'review', 'done']).optional(),
     priority: z.enum(['low', 'medium', 'high', 'urgent']).optional(),
-    dueDate: z.string().datetime().optional(),
+    dueDate: dateTimeSchema.optional(),
     estimateHours: z.number().nonnegative().optional(),
     tags: z.array(z.string().min(1).max(32)).optional(),
     assigneeId: objectId.optional(),
@@ -48,7 +54,7 @@ export const taskUpdateSchema = z.object({
     description: z.string().max(5000).optional(),
     status: z.enum(['todo', 'in-progress', 'review', 'done']).optional(),
     priority: z.enum(['low', 'medium', 'high', 'urgent']).optional(),
-    dueDate: z.string().datetime().nullable().optional(),
+    dueDate: z.union([dateTimeSchema, z.null()]).optional(),
     estimateHours: z.number().nonnegative().nullable().optional(),
     tags: z.array(z.string().min(1).max(32)).optional(),
     assigneeId: objectId.nullable().optional(),
