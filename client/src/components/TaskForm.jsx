@@ -12,6 +12,12 @@ const initialForm = {
   tags: ''
 };
 
+const toIsoDateTime = (value) => {
+  if (!value) return undefined;
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? undefined : parsed.toISOString();
+};
+
 export const TaskForm = () => {
   const { refresh } = useTasks();
   const [form, setForm] = useState(initialForm);
@@ -29,7 +35,7 @@ export const TaskForm = () => {
         description: form.description,
         priority: form.priority,
         status: form.status,
-        dueDate: form.dueDate || undefined,
+        dueDate: toIsoDateTime(form.dueDate),
         estimateHours: Number(form.estimateHours) || 0,
         tags: form.tags.split(',').map((tag) => tag.trim()).filter(Boolean)
       });

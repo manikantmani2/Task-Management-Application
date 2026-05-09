@@ -9,6 +9,12 @@ const toDateInputValue = (value) => {
   return new Date(date.getTime() - offset).toISOString().slice(0, 16);
 };
 
+const toIsoDateTime = (value) => {
+  if (!value) return null;
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
+};
+
 export const TaskModal = ({ task, mode = 'edit', onClose }) => {
   const { refresh } = useTasks();
   const [form, setForm] = useState({
@@ -45,7 +51,7 @@ export const TaskModal = ({ task, mode = 'edit', onClose }) => {
     try {
       await api.patch(`/tasks/${task._id}`, {
         ...form,
-        dueDate: form.dueDate || null,
+        dueDate: toIsoDateTime(form.dueDate),
         estimateHours: Number(form.estimateHours) || 0,
         tags: form.tags.split(',').map((tag) => tag.trim()).filter(Boolean)
       });
